@@ -39,8 +39,11 @@ def consultar_datos():
             eta_str = item.get('ETA')
             if eta_str:
                 try:
-                    eta = datetime.strptime(eta_str, "%Y-%m-%d")
-semana_del_ano = eta.isocalendar().week
+                    try:
+    eta = datetime.strptime(eta_str[:10], "%Y-%m-%d")
+    semana_del_ano = eta.isocalendar().week
+except Exception as e:
+    continue
                     if int(semana) != semana_del_ano:
                         continue
                 except:
