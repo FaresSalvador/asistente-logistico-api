@@ -40,7 +40,7 @@ def consultar_datos():
             if eta_str:
                 try:
                     eta = datetime.strptime(eta_str, "%Y-%m-%d")
-                    semana_del_ano = eta.isocalendar().week
+semana_del_ano = eta.isocalendar().week
                     if int(semana) != semana_del_ano:
                         continue
                 except:
