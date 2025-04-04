@@ -42,7 +42,7 @@ def consultar_datos():
                     semana_del_ano = eta.isocalendar().week
                     if int(semana) != semana_del_ano:
                         continue
-                except Exception as e:
+                except Exception:
                     continue
         filtrado.append(item)
 
