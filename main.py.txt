@@ -1,0 +1,27 @@
+from flask import Flask, request, jsonify
+import json
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "🚛 Asistente Logístico API funcionando"
+
+@app.route('/recibir', methods=['POST'])
+def recibir_datos():
+    data = request.get_json()
+    with open("datos_recibidos.json", "w") as archivo:
+        json.dump(data, archivo, indent=4)
+    return jsonify({"mensaje": "Datos recibidos correctamente ✅"}), 200
+
+@app.route('/consultar', methods=['GET'])
+def consultar_datos():
+    try:
+        with open("datos_recibidos.json", "r") as archivo:
+            data = json.load(archivo)
+        return jsonify(data)
+    except FileNotFoundError:
+        return jsonify({"mensaje": "Aún no se han recibido datos"}), 404
+
+if __name__ == '__main__':
+    app.run(host="0.0.0.0", port=10000)
