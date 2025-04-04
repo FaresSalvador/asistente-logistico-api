@@ -24,7 +24,6 @@ def consultar_datos():
         return jsonify({"mensaje": "Aún no se han recibido datos"}), 404
 
     # Filtros desde la URL
-    pais = request.args.get('pais')
     semana = request.args.get('semana')
     naviera = request.args.get('naviera')
     buque = request.args.get('buque')
@@ -32,8 +31,6 @@ def consultar_datos():
     filtrado = []
 
     for item in data:
-        if pais and pais.lower() not in item.get('País', '').lower():
-            continue
         if naviera and naviera.lower() not in item.get('Naviera', '').lower():
             continue
         if buque and buque.lower() not in item.get('Buque', '').lower():
