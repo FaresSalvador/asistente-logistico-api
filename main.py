@@ -23,7 +23,6 @@ def consultar_datos():
     except FileNotFoundError:
         return jsonify({"mensaje": "Aún no se han recibido datos"}), 404
 
-    # Filtros desde la URL
     semana = request.args.get('semana')
     naviera = request.args.get('naviera')
     buque = request.args.get('buque')
@@ -39,14 +38,11 @@ def consultar_datos():
             eta_str = item.get('ETA')
             if eta_str:
                 try:
-                    try:
-    eta = datetime.strptime(eta_str[:10], "%Y-%m-%d")
-    semana_del_ano = eta.isocalendar().week
-except Exception as e:
-    continue
+                    eta = datetime.strptime(eta_str[:10], "%Y-%m-%d")
+                    semana_del_ano = eta.isocalendar().week
                     if int(semana) != semana_del_ano:
                         continue
-                except:
+                except Exception as e:
                     continue
         filtrado.append(item)
 
