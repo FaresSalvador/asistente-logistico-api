@@ -1,67 +1,103 @@
 from flask import Flask, request, jsonify
-import json
+from flask_cors import CORS
 from datetime import datetime
+import json
 
 app = Flask(__name__)
+CORS(app)
 
-@app.route('/')
+datos_globales = []
+
+@app.route("/")
 def home():
     return "🚛 Asistente Logístico API funcionando"
 
-@app.route('/recibir', methods=['POST'])
-def recibir_datos():
-    data = request.get_json()
-
-    # Si viene como string, intenta convertir a JSON real
-    if isinstance(data, str):
-        try:
-            data = json.loads(data)
-        except Exception:
-            return jsonify({"error": "Formato inválido"}), 400
-
-    with open("datos_recibidos.json", "w") as archivo:
-        json.dump(data, archivo, indent=4)
-    return jsonify({"mensaje": "Datos recibidos correctamente ✅"}), 200
-
-@app.route('/consultar', methods=['GET'])
-def consultar_datos():
+@app.route("/recibir", methods=["POST"])
+def recibir():
+    global datos_globales
     try:
-        with open("datos_recibidos.json", "r") as archivo:
-            data = json.load(archivo)
-    except FileNotFoundError:
+        datos = request.get_json()
+        if not isinstance(datos, list):
+            return jsonify({"error": "La data no es una lista válida"}), 400
+        datos_globales = datos
+        return jsonify({"mensaje": "Datos recibidos correctamente ✅"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/consultar", methods=["GET"])
+def consultar():
+    global datos_globales
+    if not datos_globales:
         return jsonify({"mensaje": "Aún no se han recibido datos"}), 404
 
-    # Asegurarse que cada item sea un diccionario
-    if not isinstance(data, list):
-        return jsonify({"error": "La data no es una lista válida"}), 400
+    filtros = {
+        "semana": request.args.get("semana"),
+        "mes": request.args.get("mes"),
+        "naviera": request.args.get("naviera"),
+        "buque": request.args.get("buque"),
+        "producto": request.args.get("producto"),
+        "bl": request.args.get("bl"),
+        "booking": request.args.get("booking"),
+        "contenedor": request.args.get("contenedor"),
+        "eta": request.args.get("eta"),
+        "etd": request.args.get("etd")
+    }
 
-    semana = request.args.get('semana')
-    naviera = request.args.get('naviera')
-    buque = request.args.get('buque')
+    def cumple_filtro(valor, filtro):
+        return filtro.lower() in str(valor).lower()
 
-    filtrado = []
+    resultados = []
+    for fila in datos_globales:
+        incluir = True
 
-    for item in data:
-        if not isinstance(item, dict):
-            continue  # saltamos si el item no es un diccionario
+        # Filtro por semana
+        if filtros["semana"]:
+            try:
+                eta_str = fila.get("ETA", "")
+                eta = datetime.strptime(eta_str[:10], "%Y-%m-%d")
+                semana = eta.isocalendar()[1]
+                if int(filtros["semana"]) != semana:
+                    incluir = False
+            except:
+                incluir = False
 
-        if naviera and naviera.lower() not in item.get('Naviera', '').lower():
-            continue
-        if buque and buque.lower() not in item.get('Buque', '').lower():
-            continue
-        if semana:
-            eta_str = item.get('ETA')
-            if eta_str:
+        # Filtro por mes
+        if filtros["mes"]:
+            try:
+                eta_str = fila.get("ETA", "")
+                eta = datetime.strptime(eta_str[:10], "%Y-%m-%d")
+                mes_nombre = eta.strftime("%B").lower()
+                if filtros["mes"].lower() != mes_nombre:
+                    incluir = False
+            except:
+                incluir = False
+
+        # Filtros generales por campos
+        for campo, nombre_real in [
+            ("naviera", "Naviera"),
+            ("buque", "VESSEL - VOYAGE"),
+            ("producto", "Material"),
+            ("bl", "BL"),
+            ("booking", "Booking"),
+            ("contenedor", "Contenedor"),
+        ]:
+            if filtros[campo] and not cumple_filtro(fila.get(nombre_real, ""), filtros[campo]):
+                incluir = False
+
+        # Filtros por ETA y ETD exactos
+        for fecha_campo in ["eta", "etd"]:
+            if filtros[fecha_campo]:
                 try:
-                    eta = datetime.strptime(eta_str[:10], "%Y-%m-%d")
-                    semana_del_ano = eta.isocalendar().week
-                    if int(semana) != semana_del_ano:
-                        continue
+                    valor_fecha = fila.get(fecha_campo.upper(), "")[:10]
+                    if valor_fecha != filtros[fecha_campo]:
+                        incluir = False
                 except:
-                    continue
-        filtrado.append(item)
+                    incluir = False
 
-    return jsonify(filtrado)
+        if incluir:
+            resultados.append(fila)
 
-if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=10000)
+    return jsonify(resultados)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
